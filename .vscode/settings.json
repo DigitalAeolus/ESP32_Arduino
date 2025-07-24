@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.jinja2": "jinja",
+        "windchimeconfig.h": "c"
+    }
+}
