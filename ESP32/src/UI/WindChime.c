@@ -130,10 +130,11 @@ void WindChimeScreenCreate(lv_event_cb_t event_cb)
     lv_obj_set_style_bg_opa(center_orb, LV_OPA_80, LV_PART_MAIN);
     lv_obj_set_style_border_width(center_orb, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(center_orb, lv_color_make(0x4a, 0x4a, 0x4a), LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(center_orb, 20, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(center_orb, 40, LV_PART_MAIN);
     lv_obj_set_style_shadow_color(center_orb, lv_color_make(0x4A, 0x90, 0xE2), LV_PART_MAIN);
     lv_obj_set_style_shadow_opa(center_orb, LV_OPA_50, LV_PART_MAIN);
-
+    lv_obj_set_style_shadow_spread(center_orb, 5, LV_PART_MAIN);
+    
     // --- MODIFICATION START: Replaced volume bar with a coordinated arc ---
     volume_arc = lv_arc_create(windchime_screen);
     lv_obj_set_size(volume_arc, 120, 120); // Larger than the orb to encircle it
