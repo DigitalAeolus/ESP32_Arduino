@@ -1,0 +1,12 @@
+#include "./src/Display/Indicator_RGB_Display.h"
+#include "./src/Display/lvgldriver.h"
+
+#include "./src/UI/screen2.h"
+#include "./src/UI/screen3.h"
+#include "./src/UI/sevensegment.h"
+#include "./src/UI/WindChimeConfig.h"
+#include "./src/UI/WindChime.h"
+#include "./src/UI/ControlPanel.h"
+#include "./src/UI/DataSimulator.h"
+#include "./src/UI/AudioFeedback.h"
+#include "./src/Fonts/fonts.h"
