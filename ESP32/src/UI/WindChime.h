@@ -24,25 +24,6 @@ typedef struct {
     char description[64];   // 事件描述
 } wind_chime_event_t;
 
-// 粒子结构
-typedef struct {
-    int16_t x, y;
-    int16_t vx, vy;
-    uint8_t life;
-    uint8_t max_life;
-    lv_color_t color;
-    uint8_t size;
-} particle_t;
-
-// 涟漪效果结构
-typedef struct {
-    int16_t x, y;
-    uint16_t radius;
-    uint16_t max_radius;
-    uint8_t alpha;
-    lv_color_t color;
-    bool active;
-} ripple_t;
 
 extern lv_obj_t * windchime_screen;
 

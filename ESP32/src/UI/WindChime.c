@@ -15,12 +15,41 @@
 #define CANVAS_HEIGHT 480
 #define CENTER_X (CANVAS_WIDTH / 2)
 #define CENTER_Y (CANVAS_HEIGHT / 2)
+#define PARTICLE_GRAVITY 0.25f // Gentle gravity for a more floaty effect
+
+// --- Data Structures ---
+// --- MODIFICATION START: Using float for smoother physics ---
+typedef struct {
+    bool active;
+    float x;
+    float y;
+    float vx;
+    float vy;
+    int16_t life;
+    int16_t max_life;
+    lv_color_t color;
+    uint8_t size;
+} particle_t;
+// --- MODIFICATION END ---
+
+typedef struct {
+    bool active;
+    int16_t x;
+    int16_t y;
+    uint16_t radius;
+    uint16_t max_radius;
+    uint8_t alpha;
+    lv_color_t color;
+} ripple_t;
+
 
 // --- Global Variables ---
 lv_obj_t * windchime_screen = NULL;
 static lv_obj_t * main_canvas = NULL;
 static lv_obj_t * center_orb = NULL;
-static lv_obj_t * volume_bar = NULL;
+// --- MODIFICATION START: Replaced volume bar with an arc ---
+static lv_obj_t * volume_arc = NULL;
+// --- MODIFICATION END ---
 static lv_obj_t * event_log_label = NULL;
 
 // --- Animation & Effect Data ---
@@ -86,7 +115,7 @@ void WindChimeScreenCreate(lv_event_cb_t event_cb)
     lv_obj_set_style_bg_opa(settings_btn, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_border_width(settings_btn, 0, LV_PART_MAIN);
     lv_obj_set_style_shadow_width(settings_btn, 0, LV_PART_MAIN);
-    
+
     lv_obj_t * icon = lv_label_create(settings_btn);
     lv_label_set_text(icon, LV_SYMBOL_SETTINGS);
     lv_obj_set_style_text_color(icon, lv_color_hex(0xCCCCCC), 0);
@@ -104,21 +133,40 @@ void WindChimeScreenCreate(lv_event_cb_t event_cb)
     lv_obj_set_style_shadow_width(center_orb, 20, LV_PART_MAIN);
     lv_obj_set_style_shadow_color(center_orb, lv_color_make(0x4A, 0x90, 0xE2), LV_PART_MAIN);
     lv_obj_set_style_shadow_opa(center_orb, LV_OPA_50, LV_PART_MAIN);
-    
-    volume_bar = lv_bar_create(windchime_screen);
-    lv_obj_set_size(volume_bar, 4, 60);
-    lv_obj_align(volume_bar, LV_ALIGN_TOP_LEFT, 15, 15);
-    lv_obj_set_style_bg_color(volume_bar, lv_color_make(0x2a, 0x2a, 0x2a), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(volume_bar, lv_color_make(0x4A, 0x90, 0xE2), LV_PART_INDICATOR);
-    lv_bar_set_range(volume_bar, 0, 100);
-    lv_bar_set_value(volume_bar, audio_volume, LV_ANIM_OFF);
+
+    // --- MODIFICATION START: Replaced volume bar with a coordinated arc ---
+    volume_arc = lv_arc_create(windchime_screen);
+    lv_obj_set_size(volume_arc, 120, 120); // Larger than the orb to encircle it
+    lv_arc_set_rotation(volume_arc, 135); // Start angle (0 is 3 o'clock, 270 is 12 o'clock)
+    lv_arc_set_bg_angles(volume_arc, 0, 270); // Arc length
+    lv_arc_set_range(volume_arc, 0, 100);
+    lv_arc_set_value(volume_arc, audio_volume);
+    lv_obj_align_to(volume_arc, center_orb, LV_ALIGN_CENTER, 0, 0);
+
+    // Style the arc
+    lv_obj_remove_style(volume_arc, NULL, LV_PART_KNOB); // We don't need the knob
+    lv_obj_clear_flag(volume_arc, LV_OBJ_FLAG_CLICKABLE); // It's for display only
+
+    // Background style
+    lv_obj_set_style_arc_color(volume_arc, lv_color_make(0x3a, 0x3a, 0x3a), LV_PART_MAIN);
+    lv_obj_set_style_arc_width(volume_arc, 6, LV_PART_MAIN);
+    lv_obj_set_style_arc_opa(volume_arc, LV_OPA_80, LV_PART_MAIN);
+
+    // Indicator style (the filled part) with a gradient
+    lv_obj_set_style_arc_width(volume_arc, 6, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_grad_dir(volume_arc, LV_GRAD_DIR_HOR, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_grad_color(volume_arc, lv_color_make(0x33, 0x77, 0xFF), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_main_stop(volume_arc, 0, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_grad_stop(volume_arc, 255, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(volume_arc, lv_color_make(0x66, 0xCC, 0xFF), LV_PART_INDICATOR);
+    // --- MODIFICATION END ---
 
     memset(particles, 0, sizeof(particles));
     memset(ripples, 0, sizeof(ripples));
     memset(event_history, 0, sizeof(event_history));
-    
+
     create_visual_objects();
-    
+
     WindChimeStartAnimation();
 }
 
@@ -129,13 +177,13 @@ void WindChimeScreenCreate(lv_event_cb_t event_cb)
 void WindChimeAddEvent(wind_chime_event_t* event)
 {
     if (!event) return;
-    
+
     event_history[event_count % MAX_EVENTS_HISTORY] = *event;
     event_count++;
-    
+
     int16_t x, y;
     lv_color_t color = source_colors[event->source];
-    
+
     switch(event->source) {
         case DATA_SOURCE_GITHUB:
             x = CENTER_X + (rand() % 200) - 100;
@@ -151,16 +199,16 @@ void WindChimeAddEvent(wind_chime_event_t* event)
             y = CENTER_Y;
             break;
     }
-    
+
     uint16_t ripple_size = 50 + (event->intensity * 2);
     create_ripple(x, y, color, ripple_size);
-    uint8_t particle_count = 3 + (event->intensity / 20);
+    uint8_t particle_count = 5 + (event->intensity / 15);
     create_particles(x, y, color, particle_count);
-    
+
     PlayEventSound(event->source, event->intensity);
-    
+
     add_event_to_log(event);
-    
+
     lv_obj_set_style_shadow_color(center_orb, color, LV_PART_MAIN);
     last_event_time = lv_tick_get();
 }
@@ -174,15 +222,13 @@ static void add_event_to_log(wind_chime_event_t* event) {
     const char * current_log_text = lv_label_get_text(event_log_label);
     char new_log_buffer[1024];
 
-    // FINAL FIX: Use lv_color_to_u32() and bitwise operations. This is a robust,
-    // universal way to get R,G,B values in LVGL v9, avoiding build-specific issues.
-    lv_color_t color = source_colors[event->source];
-    uint32_t color32 = lv_color_to_u32(color);
+    // This method for getting color components is robust in LVGL v9
+    uint32_t color32 = lv_color_to_u32(source_colors[event->source]);
     uint8_t r = (color32 >> 16) & 0xFF;
     uint8_t g = (color32 >> 8) & 0xFF;
     uint8_t b = color32 & 0xFF;
 
-    char color_hex_str[7]; // RRGGBB
+    char color_hex_str[7];
     sprintf(color_hex_str, "%02X%02X%02X", r, g, b);
 
     char new_line[256];
@@ -208,7 +254,7 @@ static void add_event_to_log(wind_chime_event_t* event) {
         const char* start_of_second_line = strchr(current_log_text, '\n');
         if (start_of_second_line) {
             snprintf(new_log_buffer, sizeof(new_log_buffer), "%s\n%s", start_of_second_line + 1, new_line);
-        } else {
+        } else { // Should not happen if line_count > 1, but as a fallback
             snprintf(new_log_buffer, sizeof(new_log_buffer), "%s", new_line);
         }
     }
@@ -218,14 +264,16 @@ static void add_event_to_log(wind_chime_event_t* event) {
 static void update_center_orb(void)
 {
     uint32_t time_since_event = lv_tick_get() - last_event_time;
-    
+
     if (time_since_event < 2000) {
+        // Fade out the glow effect
         uint8_t brightness = LV_OPA_COVER - (time_since_event * LV_OPA_COVER / 2000);
         lv_obj_set_style_shadow_opa(center_orb, brightness, LV_PART_MAIN);
     } else {
         lv_obj_set_style_shadow_opa(center_orb, LV_OPA_20, LV_PART_MAIN);
     }
-    
+
+    // Shake effect based on wind speed
     int16_t shake_x = 0, shake_y = 0;
     if (current_wind_speed > 5) {
         int16_t shake_range = current_wind_speed / 5;
@@ -238,7 +286,7 @@ static void update_center_orb(void)
 
 
 // =================================================================
-// --- Other Helper Functions (Unchanged) ---
+// --- Other Helper Functions ---
 // =================================================================
 
 void WindChimeUpdateWeather(int16_t wind_speed, int16_t temperature) {
@@ -249,7 +297,11 @@ void WindChimeUpdateWeather(int16_t wind_speed, int16_t temperature) {
 
 void WindChimeSetVolume(uint8_t volume) {
     audio_volume = volume;
-    lv_bar_set_value(volume_bar, volume, LV_ANIM_ON);
+    // --- MODIFICATION START: Update the new arc indicator ---
+    if (volume_arc) {
+        lv_arc_set_value(volume_arc, volume);
+    }
+    // --- MODIFICATION END ---
     SetAudioVolume(volume);
 }
 
@@ -257,7 +309,7 @@ static void create_ripple(int16_t x, int16_t y, lv_color_t color, uint16_t max_r
     for (int i = 0; i < MAX_RIPPLES; i++) {
         if (!ripples[i].active) {
             ripples[i] = (ripple_t){.active = true, .x = x, .y = y, .radius = 0, .max_radius = max_radius, .alpha = 255, .color = color};
-            break;
+            return; // Found a spot, exit
         }
     }
 }
@@ -265,56 +317,72 @@ static void create_ripple(int16_t x, int16_t y, lv_color_t color, uint16_t max_r
 static void create_particles(int16_t x, int16_t y, lv_color_t color, uint8_t count) {
     int created = 0;
     for (int i = 0; i < MAX_PARTICLES && created < count; i++) {
-        if (particles[i].life == 0) {
+        if (particles[i].life == 0) { // Find an inactive particle
             float angle = (rand() % 360) * M_PI / 180.0f;
-            float speed = 1 + (rand() % 3);
-            particles[i].vx = (int16_t)(cos(angle) * speed);
-            particles[i].vy = (int16_t)(sin(angle) * speed);
-            particles[i].life = 60 + (rand() % 60);
+            float speed = 0.5f + ((rand() % 100) / 100.0f) * 2.5f; // Random speed from 0.5 to 3.0
+            particles[i].vx = cos(angle) * speed;
+            particles[i].vy = sin(angle) * speed;
+            particles[i].life = 80 + (rand() % 60); // Longer life for more visible effect
             particles[i].max_life = particles[i].life;
             particles[i].x = x;
             particles[i].y = y;
             particles[i].color = color;
-            particles[i].size = 2 + (rand() % 3);
+            particles[i].size = 2 + (rand() % 2);
             created++;
         }
     }
 }
 
+// --- MODIFICATION START: Fixed particle lifecycle and physics ---
 static void update_particles(void) {
     for (int i = 0; i < MAX_PARTICLES; i++) {
         if (particles[i].life > 0) {
+            // Update position with float values
             particles[i].x += particles[i].vx;
             particles[i].y += particles[i].vy;
-            particles[i].x += (current_wind_speed / 10);
-            particles[i].vy += 1; // Gravity
-            if (particles[i].x < 0 || particles[i].x >= CANVAS_WIDTH || particles[i].y < 0 || particles[i].y >= CANVAS_HEIGHT) {
-                particles[i].life = 0;
+
+            // Apply wind and gravity
+            particles[i].x += (current_wind_speed / 20.0f);
+            particles[i].vy += PARTICLE_GRAVITY;
+
+            // Check if particle is out of bounds
+            if (particles[i].x < 0 || particles[i].x >= CANVAS_WIDTH ||
+                particles[i].y < 0 || particles[i].y >= CANVAS_HEIGHT)
+            {
+                particles[i].life = 0; // Mark as dead, will be collected next frame
+            } else {
+                particles[i].life--; // Decrement life only if it's still on screen
             }
-            particles[i].life--;
         }
     }
 }
+// --- MODIFICATION END ---
+
 
 static void update_ripples(void) {
     for (int i = 0; i < MAX_RIPPLES; i++) {
         if (ripples[i].active) {
-            ripples[i].radius += 3;
-            ripples[i].alpha = (uint8_t)(255 * (1.0f - (float)ripples[i].radius / ripples[i].max_radius));
+            ripples[i].radius += 2; // Slightly slower ripple
             if (ripples[i].radius >= ripples[i].max_radius) {
                 ripples[i].active = false;
+                ripples[i].alpha = 0;
+            } else {
+                // Calculate alpha based on progress
+                ripples[i].alpha = (uint8_t)(255 * (1.0f - (float)ripples[i].radius / ripples[i].max_radius));
             }
         }
     }
 }
+
 
 static lv_obj_t * particle_objects[MAX_PARTICLES];
 static lv_obj_t * ripple_objects[MAX_RIPPLES];
 
 static void create_visual_objects(void) {
+    // Parent all effects to the main_canvas
     for (int i = 0; i < MAX_PARTICLES; i++) {
         particle_objects[i] = lv_obj_create(main_canvas);
-        lv_obj_set_size(particle_objects[i], 4, 4);
+        lv_obj_set_size(particle_objects[i], 4, 4); // Initial size, will be updated
         lv_obj_set_style_radius(particle_objects[i], LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_set_style_border_width(particle_objects[i], 0, LV_PART_MAIN);
         lv_obj_add_flag(particle_objects[i], LV_OBJ_FLAG_HIDDEN);
@@ -328,11 +396,14 @@ static void create_visual_objects(void) {
     }
 }
 
+
 static void update_visual_objects(void) {
     for (int i = 0; i < MAX_PARTICLES; i++) {
         if (particles[i].life > 0) {
             lv_obj_clear_flag(particle_objects[i], LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_pos(particle_objects[i], particles[i].x - 2, particles[i].y - 2);
+            // Use integer cast for setting position
+            lv_obj_set_pos(particle_objects[i], (int16_t)particles[i].x, (int16_t)particles[i].y);
+            lv_obj_set_size(particle_objects[i], particles[i].size, particles[i].size);
             uint8_t alpha = (particles[i].life * 255) / particles[i].max_life;
             lv_obj_set_style_bg_color(particle_objects[i], particles[i].color, LV_PART_MAIN);
             lv_obj_set_style_bg_opa(particle_objects[i], alpha, LV_PART_MAIN);
@@ -354,11 +425,21 @@ static void update_visual_objects(void) {
     }
 }
 
+// =================================================================
+// --- Animation Control ---
+// =================================================================
+
 static void animation_callback(lv_timer_t * timer) {
+    // Update data models first
     update_particles();
     update_ripples();
     update_center_orb();
+
+    // Then update the GUI objects based on the new data
     update_visual_objects();
+
+    // In LVGL v9, you don't typically need to call lv_canvas_invalidate.
+    // Object property changes automatically trigger redraws.
 }
 
 void WindChimeStartAnimation(void) {
