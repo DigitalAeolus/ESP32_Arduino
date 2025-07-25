@@ -20,6 +20,15 @@ void UpdateAmbientSound(int16_t wind_speed);
 // 设置音量
 void SetAudioVolume(uint8_t volume);
 
+// 获取当前音量
+uint8_t GetAudioVolume(void);
+
+// 保存音量设置
+void SaveAudioVolume(uint8_t volume);
+
+// 加载音量设置
+uint8_t LoadAudioVolume(void);
+
 #ifdef __cplusplus
 } /*extern "C"*/
 #endif

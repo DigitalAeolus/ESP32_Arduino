@@ -14,6 +14,10 @@
 #include "ui.h"
 #include "touch.h"
 #include "./src/UI/AudioFeedback.h"
+#include "./src/Core/WiFiManager.h"
+#include "./src/UI/WiFiConfig.h"
+#include "./src/Core/MQTTManager.h"
+#include "./src/UI/DataSimulator.h"
 
 #define HOR_RES 480
 #define VER_RES 480
@@ -45,6 +49,35 @@ Arduino_RGB_Display *gfx = new Arduino_RGB_Display(
 COBSPacketSerial myPacketSerial;
 
 void onPacketReceived(const uint8_t* buffer, size_t size);
+
+// MQTT状态回调函数
+extern "C" void mqtt_status_callback(mqtt_status_t status, const char* message)
+{
+  Serial.printf("MQTT Status: %s - %s\n", MQTTManager_GetStatusString(), message ? message : "");
+  
+  // 根据MQTT连接状态控制数据模拟器
+  // 如果MQTT连上了，那么不Mock
+  if (status == MQTT_STATUS_CONNECTED) {
+    DataSimulatorSetMQTTMode(true);
+  } else {
+    DataSimulatorSetMQTTMode(false);
+  }
+}
+
+// WiFi状态回调
+extern "C" void wifi_status_callback(wifi_status_t status, const char* message)
+{
+  Serial.printf("WiFi Status: %s - %s\n", WiFiManager_GetStatusString(), message ? message : "");
+  
+  // 当WiFi连接成功时，尝试连接MQTT
+  if (status == WIFI_STATUS_CONNECTED) {
+    Serial.println("WiFi connected, attempting MQTT connection...");
+    MQTTManager_Connect();
+  } else if (status == WIFI_STATUS_DISCONNECTED || status == WIFI_STATUS_FAILED) {
+    // WiFi断开时，MQTT也会断开
+    Serial.println("WiFi disconnected, MQTT will be disconnected");
+  }
+}
 
 uint32_t millis_cb(void)
 {
@@ -139,6 +172,14 @@ static void event_handler(lv_event_t * e)
             lv_screen_load(windchime_screen);
           }
         }
+        if (screen == wifi_config_screen)
+        {
+          Serial.println("WiFi Config Screen");
+          if (btn_no == 0)
+          {
+            lv_screen_load(control_panel_screen);
+          }
+        }
       }
     }
   }
@@ -197,6 +238,17 @@ void setup()
   Screen2Create(event_handler);
   WindChimeScreenCreate(event_handler);
   ControlPanelCreate(event_handler);
+  WiFiConfigCreate(event_handler);
+  
+  // 初始化WiFi管理器
+  WiFiManager_Init();
+  
+  // 初始化MQTT管理器
+  MQTTManager_Init();
+  MQTTManager_SetStatusCallback(mqtt_status_callback);
+  
+  // 设置WiFi状态回调
+  WiFiManager_SetStatusCallback(wifi_status_callback);
   
   // 初始化音频反馈系统
   AudioFeedbackInit();
@@ -206,6 +258,9 @@ void setup()
   // 自动启动数据模拟（演示用）
   DataSimulatorInit();
   DataSimulatorStart();
+  
+  // 尝试自动连接WiFi
+  WiFiManager_AutoConnect();
 
   Serial.println("Setup done");
 }
@@ -235,6 +290,12 @@ void loop()
   }
 
   lv_task_handler(); /* let the GUI do its work */
+  
+  // 更新WiFi管理器状态
+  WiFiManager_Update();
+  
+  // 更新MQTT管理器状态
+  MQTTManager_Update();
 
   // Simple delay always 5ms
   //delay(5);

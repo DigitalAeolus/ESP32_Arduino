@@ -9,4 +9,5 @@
 #include "./src/UI/ControlPanel.h"
 #include "./src/UI/DataSimulator.h"
 #include "./src/UI/AudioFeedback.h"
+#include "./src/UI/WiFiConfig.h"
 #include "./src/Fonts/fonts.h"

@@ -7,6 +7,8 @@
 static lv_timer_t * github_timer = NULL;
 static lv_timer_t * wiki_timer = NULL;
 static lv_timer_t * weather_timer = NULL;
+static bool simulator_running = false;
+static bool mqtt_mode = false; // MQTT模式标志
 
 // 模拟数据
 static const char* github_repos[] = {
@@ -110,6 +112,14 @@ void DataSimulatorInit(void)
 
 void DataSimulatorStart(void)
 {
+    // 如果在MQTT模式下，不启动自动模拟
+    if (mqtt_mode) {
+        //Serial.println("DataSimulator: MQTT mode active, not starting auto simulation");
+        return;
+    }
+    
+    simulator_running = true;
+    
     // 启动GitHub事件模拟器
     if (!github_timer) {
         uint32_t interval = WINDCHIME_GITHUB_INTERVAL_MIN + 
@@ -128,10 +138,14 @@ void DataSimulatorStart(void)
     if (!weather_timer) {
         weather_timer = lv_timer_create(weather_update_callback, WINDCHIME_WEATHER_INTERVAL, NULL);
     }
+    
+    //Serial.println("DataSimulator: Auto simulation started");
 }
 
 void DataSimulatorStop(void)
 {
+    simulator_running = false;
+    
     if (github_timer) {
         lv_timer_del(github_timer);
         github_timer = NULL;
@@ -145,6 +159,25 @@ void DataSimulatorStop(void)
     if (weather_timer) {
         lv_timer_del(weather_timer);
         weather_timer = NULL;
+    }
+    
+    //Serial.println("DataSimulator: Auto simulation stopped");
+}
+
+bool DataSimulatorIsRunning(void)
+{
+    return simulator_running;
+}
+
+void DataSimulatorSetMQTTMode(bool mqtt_connected)
+{
+    mqtt_mode = mqtt_connected;
+    
+    if (mqtt_connected) {
+        //Serial.println("DataSimulator: Entering MQTT mode - stopping auto simulation");
+        DataSimulatorStop();
+    } else {
+        //Serial.println("DataSimulator: Exiting MQTT mode - auto simulation can be started");
     }
 }
 

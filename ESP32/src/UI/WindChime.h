@@ -33,6 +33,9 @@ void WindChimeAddEvent(wind_chime_event_t* event);
 void WindChimeUpdateWeather(int16_t wind_speed, int16_t temperature);
 void WindChimeSetVolume(uint8_t volume);
 
+// MQTT事件触发函数
+void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description);
+
 // 动画和效果函数
 void WindChimeStartAnimation(void);
 void WindChimeStopAnimation(void);

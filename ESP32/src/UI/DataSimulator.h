@@ -12,6 +12,10 @@ extern "C" {
 void DataSimulatorInit(void);
 void DataSimulatorStart(void);
 void DataSimulatorStop(void);
+bool DataSimulatorIsRunning(void);
+
+// MQTT模式控制
+void DataSimulatorSetMQTTMode(bool mqtt_connected);
 
 // 手动触发事件（用于测试）
 void SimulateGitHubEvent(void);

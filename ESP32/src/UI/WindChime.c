@@ -214,6 +214,30 @@ void WindChimeAddEvent(wind_chime_event_t* event)
     last_event_time = lv_tick_get();
 }
 
+// MQTT事件触发函数
+void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description)
+{
+    wind_chime_event_t event;
+    event.source = source;
+    event.timestamp = lv_tick_get();
+    event.intensity = intensity;
+    event.color_hash = 0; // 将使用默认颜色
+    
+    // 复制描述，确保不超过缓冲区大小
+    if (description) {
+        strncpy(event.description, description, sizeof(event.description) - 1);
+        event.description[sizeof(event.description) - 1] = '\0';
+    } else {
+        strcpy(event.description, "MQTT Event");
+    }
+    
+    // 触发风铃事件
+    WindChimeAddEvent(&event);
+    
+    //Serial.printf("WindChime: MQTT event triggered - Source: %d, Intensity: %d, Desc: %s\n", 
+    //              source, intensity, event.description);
+}
+
 // =================================================================
 // --- Log & Animation Updates ---
 // =================================================================

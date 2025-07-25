@@ -1,8 +1,7 @@
 #include <Arduino.h>
+#include <Preferences.h>
 #include "AudioFeedback.h"
 #include "WindChimeConfig.h"
-
-// Arduino函数在C++环境中可用，不需要额外声明
 
 // 音频配置
 #define BUZZER_PIN WINDCHIME_BUZZER_PIN
@@ -12,6 +11,7 @@
 
 static uint8_t current_volume = WINDCHIME_DEFAULT_VOLUME;
 static bool audio_enabled = true;
+static Preferences audio_prefs;
 
 // 不同数据源的音调频率
 static const uint16_t source_frequencies[DATA_SOURCE_MAX] = {
@@ -20,11 +20,19 @@ static const uint16_t source_frequencies[DATA_SOURCE_MAX] = {
     523    // Weather - C5 (自然的风声)
 };
 
+extern "C" {
+
 void AudioFeedbackInit(void)
 {
     // 初始化蜂鸣器引脚
     pinMode(BUZZER_PIN, OUTPUT);
     digitalWrite(BUZZER_PIN, LOW);
+    
+    // 初始化音频设置存储
+    audio_prefs.begin("audio_config", false);
+    
+    // 加载保存的音量设置
+    current_volume = LoadAudioVolume();
 }
 
 void PlayEventSound(data_source_t source, int32_t intensity)
@@ -62,4 +70,25 @@ void UpdateAmbientSound(int16_t wind_speed)
 void SetAudioVolume(uint8_t volume)
 {
     current_volume = volume;
+    SaveAudioVolume(volume);
 }
+
+uint8_t GetAudioVolume(void)
+{
+    return current_volume;
+}
+
+void SaveAudioVolume(uint8_t volume)
+{
+    audio_prefs.putUChar("volume", volume);
+    Serial.printf("AudioFeedback: Volume saved: %d\n", volume);
+}
+
+uint8_t LoadAudioVolume(void)
+{
+    uint8_t volume = audio_prefs.getUChar("volume", WINDCHIME_DEFAULT_VOLUME);
+    Serial.printf("AudioFeedback: Volume loaded: %d\n", volume);
+    return volume;
+}
+
+} // extern "C"

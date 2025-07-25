@@ -2,9 +2,9 @@
 #define WINDCHIME_CONFIG_H
 
 // 视觉效果配置
-#define WINDCHIME_MAX_PARTICLES 30        // 减少粒子数量以提高性能
-#define WINDCHIME_MAX_RIPPLES 8           // 减少涟漪数量
-#define WINDCHIME_ANIMATION_FPS 20        // 降低帧率以节省资源
+#define WINDCHIME_MAX_PARTICLES 30        // max粒子数量
+#define WINDCHIME_MAX_RIPPLES 8           // max涟漪数量
+#define WINDCHIME_ANIMATION_FPS 20        // 帧率
 
 // 音频配置
 #define WINDCHIME_BUZZER_PIN 42           // 蜂鸣器引脚
