@@ -183,16 +183,15 @@ void WindChimeAddEvent(wind_chime_event_t* event)
     event_count++;
 
     int16_t x, y;
-    lv_color_t color = source_colors[event->source];
+    // lv_color_t color = source_colors[event->source];
+    circle_style_t style = event.circle_style
+    lv_color_t colot = lv_color_make(style.r, style.g, style.b)
 
     switch(event->source) {
         case DATA_SOURCE_GITHUB:
-            x = CENTER_X + (rand() % 200) - 100;
-            y = CENTER_Y + (rand() % 200) - 100;
-            break;
         case DATA_SOURCE_WIKIPEDIA:
-            x = CENTER_X + (rand() % 160) - 80;
-            y = CENTER_Y + (rand() % 160) - 80;
+            x = event->circle_style.x_coord;
+            y = event->circle_style.y_coord;
             break;
         case DATA_SOURCE_WEATHER:
         default:
@@ -215,7 +214,7 @@ void WindChimeAddEvent(wind_chime_event_t* event)
 }
 
 // MQTT事件触发函数
-void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description)
+void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description, circle_style_t* circle_style)
 {
     wind_chime_event_t event;
     event.source = source;

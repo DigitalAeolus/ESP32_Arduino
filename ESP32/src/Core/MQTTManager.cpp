@@ -290,7 +290,15 @@ static void process_mqtt_message(const char* topic, const char* payload)
     strncpy(event_data.time, data["time"] | "", sizeof(event_data.time) - 1);
     strncpy(event_data.data1, data["data1"] | "", sizeof(event_data.data1) - 1);
     strncpy(event_data.data2, data["data2"] | "", sizeof(event_data.data2) - 1);
-    
+
+    event_data.circle_style.x_coord = data["style"]["x_coord"] | 200;
+    event_data.circle_style.y_coord = data["style"]["y_coord"] | 200;
+    event_data.circle_style.radius = data["style"]["radius"] | 50;
+    event_data.circle_style.r = data["style"]["color"]["r"] | 255;
+    event_data.circle_style.g = data["style"]["color"]["g"] | 255;
+    event_data.circle_style.b = data["style"]["color"]["b"] | 255;
+    event_data.circle_style.a = data["style"]["color"]["a"] | 1.0;
+
     // 计算强度
     event_data.intensity = calculate_intensity(&event_data);
     
@@ -303,7 +311,7 @@ static void process_mqtt_message(const char* topic, const char* payload)
     }
     
     // 直接触发风铃事件
-    TriggerWindChimeEvent(event_data.source, event_data.intensity, event_data.description_title);
+    TriggerWindChimeEvent(event_data.source, event_data.intensity, event_data.description_title, &event_data.circle_style);
 }
 
 static data_source_t map_source_string(const char* source_str)

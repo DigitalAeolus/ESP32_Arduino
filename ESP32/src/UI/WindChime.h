@@ -22,6 +22,7 @@ typedef struct {
     int32_t intensity;      // 事件强度 (0-100)
     uint32_t color_hash;    // 颜色哈希值
     char description[64];   // 事件描述
+    circle_style_t circle_style; // 圆形样式
 } wind_chime_event_t;
 
 
@@ -34,7 +35,7 @@ void WindChimeUpdateWeather(int16_t wind_speed, int16_t temperature);
 void WindChimeSetVolume(uint8_t volume);
 
 // MQTT事件触发函数
-void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description);
+void TriggerWindChimeEvent(data_source_t source, int32_t intensity, const char* description, circle_style_t* circle_style);
 
 // 动画和效果函数
 void WindChimeStartAnimation(void);

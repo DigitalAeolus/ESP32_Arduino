@@ -27,6 +27,16 @@ typedef struct {
     data_source_t source_type;
 } mqtt_source_mapping_t;
 
+typedef struct {
+    int r;
+    int g;
+    int b;
+    float a;
+    int x_coord;
+    int y_coord;
+    int radius;
+} circle_style_t;
+
 // MQTT事件数据结构
 typedef struct {
     data_source_t source;
@@ -36,6 +46,7 @@ typedef struct {
     char data1[64];
     char data2[64];
     int32_t intensity;
+    circle_style_t circle_style;
 } mqtt_event_data_t;
 
 // 回调函数类型
